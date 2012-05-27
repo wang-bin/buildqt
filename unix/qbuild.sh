@@ -1,0 +1,1 @@
+../qt5-linux/qbuild.sh
