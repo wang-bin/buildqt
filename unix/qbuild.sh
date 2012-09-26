@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #check bash version
-
+#Requirement: accessibility needs pkg-config libatspi2.0-dev
 help()
 {
 #Copyright
@@ -12,14 +12,17 @@ __cecho blue "packqt"
 
 }
 
-
+#echo $PWD
+CFG=$PWD/.cfg.old
+[ -f $CFG ] && . $CFG
 #vars is a var not used by configure
 declare -A vars
-vars["configure"]=./configure
-vars["version"]=4.8.2
-vars["sdkdir"]=/opt/QtSDK
+vars["configure"]=${configure:-./configure}
+vars["version"]=${version:-4.8.3}
+vars["sdkdir"]=${sdkdir:-/opt/QtSDK}
 vars["installdir"]=
-vars[mkspec]=linux-g++
+vars[mkspec]=${mkspec:-linux-g++} #TODO: install dir depends mkspec or host?
+vars[host]=${host:-linux-g++}
 
 #opts contains variables and values to be used in configure
 #see configure help message
@@ -30,6 +33,12 @@ setqt() #[key=val]. no params means to run configure
 	if [ $# -eq 0 ]; then
 		__get_version ${vars[configure]}
 		__init_opts
+		echo "configure=${vars[configure]}" >$CFG
+		echo "version=${vars[version]}" >>$CFG
+		echo "sdkdir=${vars[sdkdir]}" >>$CFG
+		echo "mkspec=${vars[mkspec]}" >>$CFG
+		echo "host=${vars[host]}" >>$CFG
+
 		echo ${vars[configure]} ${opts[@]}
 		time ${vars[configure]} ${opts[@]}  << EOF
 yes
@@ -109,7 +118,7 @@ __init_opts()
 		vars[installdir]=${vars[sdkdir]}/Desktop/Qt/${vars[version]}/${vars[mkspec]}
 	fi
 	opts["install"]="-prefix ${vars[installdir]}"
-	opts["generic"]="-developer-build -opensource -release -shared  -rpath -fast -pch -optimized-qmake -continue -largefile  -javascript-jit -no-separate-debug-info"
+	opts["generic"]="-developer-build -opensource -release -shared  -rpath -fast -pch -optimized-qmake -continue -javascript-jit -no-separate-debug-info"
 	opts["plugin"]="-qt-sql-sqlit -qt-libpng -qt-zlib"
 	opts["part"]="  -nomake demos -nomake tests -nomake examples"
 	test -n "`echo ${vars[mkspec]} |grep -i linux`" &&  opts["linux"]="-dbus"
@@ -117,25 +126,25 @@ __init_opts()
 	opts[qws]=
 	#for 4.7
 	test -n "`echo ${vars[mkspec]} |grep -i qws`" && opts["qws"]="-embedded armv6" # -qt-mouse-pc -qt-mouse-linuxinput -qt-mouse-linuxtp -qt-gfx-transformed -qt-gfx-linuxfb -qt-kbd-linuxinput"
-	test -n "`echo ${vars[mkspec]} |grep -i ios`" && opts["ios"]="-qpa -arch armv7 -no-neon -little-endian -qconfig ios -openssl-linked" \
-	&& opts["qws"]="-no-gfx-linuxfb -no-kbd-tty -no-mouse-pc -no-mouse-linuxtp  -no-gfx-multiscreen -no-phonon-backend -no-accessibility"
+	test -n "`echo ${vars[mkspec]} |grep -i ios`" && opts["ios"]="-qpa -arch armv7 -no-neon -little-endian -qconfig ios -opengl -openssl-linked" \
+	&& opts["qws"]="" #"-no-gfx-linuxfb -no-kbd-tty -no-mouse-pc -no-mouse-linuxtp  -no-gfx-multiscreen -no-phonon-backend -no-accessibility"
 	test -n "${vars[arch]}" && opts["arch"]="-arch ${vars[arch]}"
 	if [ $QT__VERSION_MAJOR -eq 4 ]; then
 		opts["plugin"]="${opts[plugin]} -qt-libtiff -qt-libmng"
-		opts["generic"]="${opts[generic]}  -stl"
+		opts["generic"]="${opts[generic]}  -largefile -stl"
 		opts["part"]="${opts[part]} -declarative -no-qt3support -script -scripttools -svg -multimedia -phonon -no-declarative-debug"
-		opts["linux"]="${opts[linux]}  -freetype"
+		opts["linux"]="${opts[linux]}  -freetype  -opengl"
 		if [ $QT__VERSION_MINOR -ge 8 ]; then
-			opts["generic"]="${opts[generic]} -silent"
+			opts["generic"]="${opts[generic]} " #-silent
 		else
 			opts["plugin"]="${opts[plugin]}  -qt-gif"
 		fi
 	elif [ $QT__VERSION_MAJOR -eq 5 ]; then
-		 opts["generic"]="${opts[generic]} -silent"
+		 opts["generic"]="${opts[generic]} -silent -accessibility -largefile" #-c++11 
 		 test -n "`echo ${vars[mkspec]} |grep -i linux`" && opts["linux"]="${opts[linux]} -opengl -qpa xcb" #-qt-freetype"
 	
 	fi
-	test -n "${vars[mkspec]}" && opts[host]="-platform ${vars[mkspec]}"
+	test -n "${vars[host]}" && opts[host]="-platform ${vars[host]}"
 }
 
 
