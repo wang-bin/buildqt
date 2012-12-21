@@ -32,15 +32,18 @@ for qtmodule in $QT_MODULES
 do
   echo "Getting private headers for $qtmodule..."
   cd $qtmodule
-  if [ -d private ]; then
-  cat private/*.h |sed 's/#include \"..\/\(.*\)\"/\1/g' >private.list
-  #rdir=`head -n 1 private.list |sed 's/\(.*src\).*/\1/'`
-  #echo "$rdir"
-  [ -f private.7z ] && rm private.7z
-  7z a private.7z @private.list
-  rm private.list
+  pdir=`find . -type d |grep private`
+  if [ "X$pdir" != "X" ]; then
+	  cd $pdir
+	  cat *.h |sed 's/#include \"\(.*\)\"/\1/g' >private.list
+	  #rdir=`head -n 1 private.list |sed 's/\(.*src\).*/\1/'`
+	  #echo "$rdir"
+	  [ -f private.7z ] && rm private.7z
+	  7z a private.7z @private.list
+	  rm private.list
+	  cd -
   fi
   cd ..
-  [ -f $qtmodule/private.7z ] && mv $qtmodule/private.7z ${qtmodule}_private.7z
+  [ -f $qtmodule/$pdir/private.7z ] && mv $qtmodule/$pdir/private.7z ${qtmodule}_private.7z
 done
 )
