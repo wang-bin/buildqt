@@ -15,7 +15,7 @@ for qtmodule in $QT_MODULES
 do
   echo "Getting headers for $qtmodule..."
   cd $qtmodule
-  cat *.h |sed 's/#include \"\(.*\)\"/\1/g' >h.list
+  cat *.h |grep '#include' |sed 's/#include \"\(.*\)\"/\1/g' >h.list
   [ -f h.7z ] && rm h.7z
   7z a h.7z @h.list
   rm h.list
