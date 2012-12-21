@@ -12,6 +12,8 @@ __cecho blue "packqt"
 
 }
 
+
+WIN="`uname -a |grep NT`"
 #echo $PWD
 CFG=$PWD/.cfg.old
 [ -f $CFG ] && . $CFG
@@ -23,7 +25,7 @@ vars["sdkdir"]=${sdkdir:-/opt/QtSDK}
 vars["installdir"]=
 vars[mkspec]=${mkspec:-linux-g++} #TODO: install dir depends mkspec or host?
 vars[host]=${host:-linux-g++}
-
+vars[other]=${other}
 #opts contains variables and values to be used in configure
 #see configure help message
 declare -A opts
@@ -38,7 +40,8 @@ setqt() #[key=val]. no params means to run configure
 		echo "sdkdir=${vars[sdkdir]}" >>$CFG
 		echo "mkspec=${vars[mkspec]}" >>$CFG
 		echo "host=${vars[host]}" >>$CFG
-
+		echo "other=\"${vars[other]}\"" >>$CFG
+echo "settings saved"
 		echo ${vars[configure]} ${opts[@]}
 		time ${vars[configure]} ${opts[@]}  << EOF
 yes
@@ -55,9 +58,16 @@ buildqt() #[-log]
 	
 	local cpu_cores=`cat /proc/cpuinfo |grep 'cpu cores' |wc -l`
 	local jobs=$(($cpu_cores * 2))
-	if [ "$1" == "-log" ]; then
-		log_opt=" 2>&1 |tee buildqt.log"
-	fi
+	argv=($@)
+	s=${#argv}
+	echo $s
+	for ((i=0;i<s;i++))
+	do
+		if [ "$1" == "-log" ]; then
+			log_opt=" 2>&1 |tee buildqt.log"
+			unset argv[i]
+		fi
+	done
 	eval time make -j$jobs $log_opt
 }
 
@@ -118,11 +128,17 @@ __init_opts()
 		vars[installdir]=${vars[sdkdir]}/Desktop/Qt/${vars[version]}/${vars[mkspec]}
 	fi
 	opts["install"]="-prefix ${vars[installdir]}"
-	opts["generic"]="-developer-build -opensource -release -shared  -rpath -fast -pch -optimized-qmake -continue -javascript-jit -no-separate-debug-info"
-	opts["plugin"]="-qt-sql-sqlit -qt-libpng -qt-zlib"
+	if [ -z "$WIN" -a -z "`echo ${vars[mkspec]} |grep -i win32`" ]; then
+		opts[link]="-rpath"
+	else
+		opts[ssl]="-no-openssl"
+		opts[gl]="-no-opengl"
+		opts[x11]="-no-xcb -no-glib -no-xkb  -no-xrandr -no-xsync -no-xshape -no-xinput -no-xinput2 -no-xfixes -no-xcursor -no-xvideo -no-xinerama"
+	fi
+	opts["generic"]="-developer-build -opensource -release -shared -pch -optimized-qmake -continue -javascript-jit -no-separate-debug-info"
+#	opts["plugin"]="-qt-sql-sqlit -qt-libpng -qt-zlib"
 	opts["part"]="  -nomake demos -nomake tests -nomake examples"
-	test -n "`echo ${vars[mkspec]} |grep -i linux`" &&  opts["linux"]="-dbus"
-	test -n "${vars[x11]}" && opts["x11"]= #default x11 opts
+#	test -n "${vars[x11]}" && opts["x11"]= #default x11 opts
 	opts[qws]=
 	#for 4.7
 	test -n "`echo ${vars[mkspec]} |grep -i qws`" && opts["qws"]="-embedded armv6" # -qt-mouse-pc -qt-mouse-linuxinput -qt-mouse-linuxtp -qt-gfx-transformed -qt-gfx-linuxfb -qt-kbd-linuxinput"
@@ -130,21 +146,25 @@ __init_opts()
 	&& opts["qws"]="" #"-no-gfx-linuxfb -no-kbd-tty -no-mouse-pc -no-mouse-linuxtp  -no-gfx-multiscreen -no-phonon-backend -no-accessibility"
 	test -n "${vars[arch]}" && opts["arch"]="-arch ${vars[arch]}"
 	if [ $QT__VERSION_MAJOR -eq 4 ]; then
-		opts["plugin"]="${opts[plugin]} -qt-libtiff -qt-libmng"
-		opts["generic"]="${opts[generic]}  -largefile -stl"
+#		opts["plugin"]="${opts[plugin]} -qt-libtiff -qt-libmng"
+		opts["generic"]="${opts[generic]}  -largefile -stl -fast"
 		opts["part"]="${opts[part]} -declarative -no-qt3support -script -scripttools -svg -multimedia -phonon -no-declarative-debug"
 		opts["linux"]="${opts[linux]}  -freetype  -opengl"
 		if [ $QT__VERSION_MINOR -ge 8 ]; then
-			opts["generic"]="${opts[generic]} " #-silent
+			opts["generic"]="${opts[generic]} -silent"
+			if [ $QT__VERSION_PATH -ge 4 ]; then
+				opts["optimize"]="${opts[optimize]} -ltcg"
+			fi
 		else
 			opts["plugin"]="${opts[plugin]}  -qt-gif"
 		fi
 	elif [ $QT__VERSION_MAJOR -eq 5 ]; then
-		 opts["generic"]="${opts[generic]} -silent -accessibility -largefile" #-c++11 
-		 test -n "`echo ${vars[mkspec]} |grep -i linux`" && opts["linux"]="${opts[linux]} -opengl -qpa xcb" #-qt-freetype"
+		 opts["generic"]="${opts[generic]} -ltcg -silent -accessibility -largefile" #-c++11 
+		 test -n "`echo ${vars[mkspec]} |grep -i linux`" && echo LINUX && opts["linux"]="${opts[linux]} -opengl es2" #-qt-freetype" -qpa xcb
 	
 	fi
 	test -n "${vars[host]}" && opts[host]="-platform ${vars[host]}"
+	opts[other]="${vars[other]}"
 }
 
 
