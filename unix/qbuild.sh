@@ -135,7 +135,7 @@ __init_opts()
 		opts[gl]="-no-opengl"
 		opts[x11]="-no-xcb -no-glib -no-xkb  -no-xrandr -no-xsync -no-xshape -no-xinput -no-xinput2 -no-xfixes -no-xcursor -no-xvideo -no-xinerama"
 	fi
-	opts["generic"]="-developer-build -opensource -release -shared -pch -optimized-qmake -continue -javascript-jit -no-separate-debug-info"
+	opts["generic"]="-developer-build -opensource -confirm-license -release -shared -pch -optimized-qmake -continue -javascript-jit -no-separate-debug-info"
 #	opts["plugin"]="-qt-sql-sqlit -qt-libpng -qt-zlib"
 	opts["part"]="  -nomake demos -nomake tests -nomake examples"
 #	test -n "${vars[x11]}" && opts["x11"]= #default x11 opts
