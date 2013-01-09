@@ -26,7 +26,7 @@ set INCLUDE=%INCLUDE%;%WCE_EXTRAS%\include
 cd /d %BUILD_DIR%
 
 
-set QT_CONF_OPTS=-developer-build  -opensource -prefix %QTCE_DIR%  -examplesdir %QTSDK_DIR%\Examples\4.8 -demosdir %QTSDK_DIR%\Demos\4.8 -platform win32-msvc2008 -xplatform wincewm60professional-msvc2008 -release -shared -fast -stl -qt-sql-sqlite -no-qt3support -no-declarative-debug -nomake demos -nomake examples -nomake docs  -qt-libpng -qt-libtiff -qt-libjpeg -qt-libmng -qt-zlib -script -scripttools -no-webkit
+set QT_CONF_OPTS=-developer-build  -opensource -prefix %QTCE_DIR%  -examplesdir %QTSDK_DIR%\Examples\4.8 -demosdir %QTSDK_DIR%\Demos\4.8 -platform win32-msvc2008 -xplatform wincewm60professional-msvc2008 -release -shared -fast -stl -qt-sql-sqlite -no-qt3support -no-declarative-debug -nomake demos -nomake examples -nomake docs  -qt-libpng -qt-libtiff -qt-libjpeg -qt-libmng -qt-zlib -script -scripttools -no-webkit -largefile
 ::  -prefix-install. -prefix doesn't work
 :: -bindir -libdir  -docdir -headerdir -plugindir -translationdir 
 ::  -declarative  -opengl es2 -openvg -openssl -audio-backend  -iwmmxt
