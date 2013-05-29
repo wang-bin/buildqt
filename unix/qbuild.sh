@@ -159,7 +159,7 @@ __init_opts()
 			opts["plugin"]="${opts[plugin]}  -qt-gif"
 		fi
 	elif [ $QT__VERSION_MAJOR -eq 5 ]; then
-		 opts["generic"]="${opts[generic]} -ltcg -silent -accessibility -largefile" #-c++11 
+		 opts["generic"]="${opts[generic]} -silent -accessibility -largefile" #-c++11 
 		 test -n "`echo ${vars[mkspec]} |grep -i linux`" && echo LINUX && opts["linux"]="${opts[linux]} -opengl es2" #-qt-freetype" -qpa xcb
 	
 	fi
