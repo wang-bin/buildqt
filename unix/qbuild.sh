@@ -137,7 +137,9 @@ __init_opts()
 	fi
 	opts["generic"]="-developer-build -opensource -confirm-license -release -shared -pch -optimized-qmake -continue -javascript-jit -no-separate-debug-info"
 #	opts["plugin"]="-qt-sql-sqlit -qt-libpng -qt-zlib"
-	opts["part"]="  -nomake demos -nomake tests -nomake examples"
+	opts["part"]=" -nomake tests -nomake examples"
+    [ $QT__VERSION_MAJOR -eq 4 ] && opts[part]="${opts[part]}  -nomake demos"
+
 #	test -n "${vars[x11]}" && opts["x11"]= #default x11 opts
 	opts[qws]=
 	#for 4.7
