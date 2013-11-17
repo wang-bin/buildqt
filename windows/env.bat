@@ -4,6 +4,7 @@
 set THIS=%~nx0
 set THIS_DIR=%~dp0
 set compiler=%1
+set ARCH=
 
 if "%compiler%" == "" (goto help)
 if "%compiler%" == "g++" set QMAKESPECNAME=win32-g++
@@ -28,6 +29,8 @@ set WINSDK_DIR=C:\dev\v7.1A
 
 
 set XP_OPTS=
+set SSL_OPTS=-openssl
+set GL_OPTS=-opengl es2 -angle
 :: for clang
 ::set CPATH=%THIS_DIR%include\c++\4.8.0;%THIS_DIR%x86_64-w64-mingw32\include;%THIS_DIR%include\c++\4.8.0\x86_64-w64-mingw32
 ::set LIBRARY_PATH=%THIS_DIR%x86_64-w64-mingw32\lib
@@ -60,6 +63,12 @@ goto END
 :: may be called from vc prompt, so %PATH% should be kept
 :: GNUWin32's link.exe conflicts with vc, we should not add it to PATH
 set PATH=%THIS_DIR%bin;%PERL_BIN%;%SystemRoot%\system32;%SystemRoot%;%QTSRCDIR%;%PATH%
+
+cl 2>%TEMP%\testarch.txt
+findstr /i x64 %TEMP%\testarch.txt  1>nul && set ARCH=x64
+findstr /i x86_64 %TEMP%\testarch.txt  1>nul   && set ARCH=x86_64
+findstr /i x86 %TEMP%\testarch.txt  1>nul  && set ARCH=x86
+findstr /i ARM %TEMP%\testarch.txt  1>nul  && set ARCH=arm && set GL_OPTS= && set SSL_OPTS=
 goto setqt
 
 :setgcc
@@ -68,15 +77,17 @@ goto setqt
 @echo ...
 @set MAKE_COMMAND=mingw32-make -j4
 set PATH=%THIS_DIR%bin;%GNUWIN32_BIN%;%MINGW_BIN%;%PERL_BIN%;%SystemRoot%\system32;%SystemRoot%;%QTSRCDIR%;
+for /f "delims=" %%t in ('gcc -dumpmachine') do set ARCH=%%t
 goto setqt
 
 :setqt
-md qt-%QMAKESPECNAME%
-cd qt-%QMAKESPECNAME%
-set PATH=%THIS_DIR%qt-%QMAKESPECNAME%\bin;%PATH%
+set BUILDQT_OUT=qt-%QMAKESPECNAME%-%ARCH%%XP_OPTS%
+md %BUILDQT_OUT%
+cd %BUILDQT_OUT%
+set PATH=%THIS_DIR%%BUILDQT_OUT%\bin;%PATH%
 
-set QT5OPT=-release -opensource -confirm-license -platform %QMAKESPECNAME%  -developer-build -ltcg -c++11 -no-freetype -opengl es2 -angle -openssl -qt-sql-sqlite  -no-iconv -qt-style-windowsvista -nomake tests  -nomake examples  -mp -openssl %XP_OPTS%
-set QT5OPT_NOCXX11=-release -opensource -confirm-license -platform %QMAKESPECNAME% -developer-build -ltcg -no-c++11 -no-freetype -opengl es2 -angle -openssl -qt-sql-sqlite  -qt-style-windowsxp -qt-style-windowsvista -nomake tests - -nomake examples %XP_OPTS%
+set QT5OPT=-release -opensource -confirm-license -platform %QMAKESPECNAME%  -developer-build -ltcg -c++11 -no-freetype  -qt-sql-sqlite  -no-iconv -qt-style-windowsvista -nomake tests  -nomake examples  -mp  %XP_OPTS% %GL_OPTS% %SSL_OPTS%
+set QT5OPT_NOCXX11=-release -opensource -confirm-license -platform %QMAKESPECNAME% -developer-build -ltcg -no-c++11 -no-freetype -qt-sql-sqlite  -qt-style-windowsxp -qt-style-windowsvista -nomake tests - -nomake examples %XP_OPTS%  %GL_OPTS% %SSL_OPTS%
 set QT4OPT=-developer-build  -opensource -confirm-license -platform %QMAKESPECNAME% -ltcg -release -shared -fast -stl -qt-sql-sqlite -no-qt3support -no-xmlpatterns -no-declarative-debug -nomake demos -nomake examples -nomake docs  -nomake tests -qt-libpng -qt-libtiff -qt-libjpeg -qt-libmng -script -scripttools -no-webkit  -qt-style-windowsxp -qt-style-windowsvista  -opengl desktop -openssl %XP_OPTS%
 
 :: -graphicssystem opengl
