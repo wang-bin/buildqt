@@ -8,12 +8,14 @@
 
 set GNUWin32, Perl, MinGW, OpenSSL(optional) dir
 
+
+    set DEPEND_DIR=%THIS_DIR%depends
     set GNUWIN32_BIN=G:\GNUWin32\bin
     set PERL_BIN=G:\strawberry\perl\bin
-    set MINGW_BIN=C:\MinGW\bin
+    set MINGW_BIN=G:\MinGW\MinGW\bin
     set QTSRCDIR=G:\dev\qtbase
-    set INCLUDE_SSL=g:\build\openssl\include
-    set LIB_SSL=g:\build\openssl\lib
+    set OPENSSL_DIR=%DEPEND_DIR%\OpenSSL
+    set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
 
 
 2. double click buildqt/win32-g++/buildqt_mingw, a cmd dialog will popup. It will tell you how to build.  
@@ -29,7 +31,15 @@ To build Qt5
 
 #### MSVC
 
-I think it's easy, so no script present.
+Almost the same.
+
+Open vs prompt window, go to buildqt dir. run
+
+    call env.bat vc 2013
+
+Then 
+
+	configure %QT5OPT%
 
 
 #### Windows CE
