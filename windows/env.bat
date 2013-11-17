@@ -22,7 +22,10 @@ set OPENSSL_DIR=%DEPEND_DIR%\OpenSSL
 :: INCLUDE, LIB, PATH may be auto define if DXSDK_DIR is set
 set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
 set QTDIR=
-set WINSDKDIR=C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A
+:: WINSDK_DIR can not contain '(' and ')'. e.g. C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A is wrong. you may move it to another place
+:: TODO: why? happens if %WINSDK_DIR%\Include. But if "%WINSDK_DIR%\Include" winver.h may can't be found.
+set WINSDK_DIR=C:\dev\v7.1A
+
 
 set XP_OPTS=
 :: for clang
@@ -38,11 +41,10 @@ if "%QMAKESPECNAME%" == "win32-g++" (
 ) else (
 	echo "%QMAKESPECNAME%"
 	if "%3" == "-xp" (
-		set INCLUDE=%VCINSTALLDIR%INCLUDE;"%WINSDKDIR%\Include"
-		set LIB=%VCINSTALLDIR%LIB;"%WINSDKDIR%\lib"
+		set INCLUDE=%VCINSTALLDIR%INCLUDE;%WINSDK_DIR%\Include
+		set LIB=%VCINSTALLDIR%LIB;%WINSDK_DIR%\lib
 		set XP_OPTS=-xp
 	)
-		
 	goto setvc
 )
 
