@@ -5,6 +5,8 @@ set THIS=%~nx0
 set THIS_DIR=%~dp0
 set compiler=%1
 set ARCH=
+set XP=no
+if "%3" == "-xp" set XP=yes
 
 if "%compiler%" == "" (goto help)
 if "%compiler%" == "g++" set QMAKESPECNAME=win32-g++
@@ -21,8 +23,18 @@ set MINGW_BIN=G:\MinGW\MinGW\bin
 set QTSRCDIR=G:\dev\qtbase
 set OPENSSL_DIR=%DEPEND_DIR%\OpenSSL
 :: INCLUDE, LIB, PATH may be auto define if DXSDK_DIR is set
-set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
 set QTDIR=
+
+if "%compiler%" == "vc" (
+	if %2 lss 2012 (
+        set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
+	) else (
+	    set DXSDK_DIR=
+	)
+)
+if "%compiler%" == "g++" set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
+if "%compiler%" == "clang" set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
+
 :: WINSDK_DIR can not contain '(' and ')'. e.g. C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A is wrong. you may move it to another place
 :: TODO: why? happens if %WINSDK_DIR%\Include. But if "%WINSDK_DIR%\Include" winver.h may can't be found.
 set WINSDK_DIR=C:\dev\v7.1A
@@ -35,6 +47,7 @@ set GL_OPTS=-opengl es2 -angle
 ::set CPATH=%THIS_DIR%include\c++\4.8.0;%THIS_DIR%x86_64-w64-mingw32\include;%THIS_DIR%include\c++\4.8.0\x86_64-w64-mingw32
 ::set LIBRARY_PATH=%THIS_DIR%x86_64-w64-mingw32\lib
 
+:: VS110COMNTOOLS VS120COMNTOOLS WindowsSdkDir VCINSTALLDIR VisualStudioVersion(11.0)
 if "%QMAKESPECNAME%" == "win32-g++" (
 	echo "%QMAKESPECNAME%"
 	goto setgcc
@@ -43,11 +56,6 @@ if "%QMAKESPECNAME%" == "win32-g++" (
 	goto setgcc
 ) else (
 	echo "%QMAKESPECNAME%"
-	if "%3" == "-xp" (
-		set INCLUDE=%VCINSTALLDIR%INCLUDE;%WINSDK_DIR%\Include
-		set LIB=%VCINSTALLDIR%LIB;%WINSDK_DIR%\lib
-		set XP_OPTS=-xp
-	)
 	goto setvc
 )
 
@@ -66,9 +74,34 @@ set PATH=%THIS_DIR%bin;%PERL_BIN%;%SystemRoot%\system32;%SystemRoot%;%QTSRCDIR%;
 
 cl 2>%TEMP%\testarch.txt
 findstr /i x64 %TEMP%\testarch.txt  1>nul && set ARCH=x64
-findstr /i x86_64 %TEMP%\testarch.txt  1>nul   && set ARCH=x86_64
+findstr /i x86_64 %TEMP%\testarch.txt  1>nul   && set ARCH=x64
 findstr /i x86 %TEMP%\testarch.txt  1>nul  && set ARCH=x86
 findstr /i ARM %TEMP%\testarch.txt  1>nul  && set ARCH=arm && set GL_OPTS= && set SSL_OPTS=
+set WIN_SDK_LIB=%WINSDK_DIR%\Lib
+set VCLIB=%VCINSTALLDIR%\lib
+if "%ARCH%" == "x86" (
+	set WIN_SDK_LIB=%WINSDK_DIR%\Lib
+	set VCLIB=%VCINSTALLDIR%\lib
+) else if "%ARCH%" == "x64" (
+	set WIN_SDK_LIB=%WINSDK_DIR%\Lib\x64
+	set VCLIB=%VCINSTALLDIR%\lib\amd64
+) else if "%ARCH%" == "x86_64" (
+	set WIN_SDK_LIB=%WINSDK_DIR%\Lib\x64
+	set VCLIB=%VCINSTALLDIR%\lib\amd64
+)  else (
+	set WIN_SDK_LIB=%WINSDK_DIR%\Lib\%ARCH%
+	set VCLIB=%VCINSTALLDIR%\lib\%ARCH%
+)
+
+if "%XP%" == "yes" (
+:: _USING_V120_SDK71_
+echo "XP"
+	set XP_OPTS=-target xp
+	set SUFFIX=-xp
+	set INCLUDE=%WINSDK_DIR%\Include;%VCINSTALLDIR%\include
+	set LIB=%WIN_SDK_LIB%;%VCLIB%
+)
+
 goto setqt
 
 :setgcc
@@ -81,20 +114,20 @@ for /f "delims=" %%t in ('gcc -dumpmachine') do set ARCH=%%t
 goto setqt
 
 :setqt
-set BUILDQT_OUT=qt-%QMAKESPECNAME%-%ARCH%%XP_OPTS%
+set BUILDQT_OUT=qt-%QMAKESPECNAME%-%ARCH%%SUFFIX%
 md %BUILDQT_OUT%
 cd %BUILDQT_OUT%
 set PATH=%THIS_DIR%%BUILDQT_OUT%\bin;%PATH%
 
 set QT5OPT=-release -opensource -confirm-license -platform %QMAKESPECNAME%  -developer-build -ltcg -c++11 -no-freetype  -qt-sql-sqlite  -no-iconv -qt-style-windowsvista -nomake tests  -nomake examples  -mp  %XP_OPTS% %GL_OPTS% %SSL_OPTS%
-set QT5OPT_NOCXX11=-release -opensource -confirm-license -platform %QMAKESPECNAME% -developer-build -ltcg -no-c++11 -no-freetype -qt-sql-sqlite  -qt-style-windowsxp -qt-style-windowsvista -nomake tests - -nomake examples %XP_OPTS%  %GL_OPTS% %SSL_OPTS%
+set QT5OPT_NOCXX11=-release -opensource -confirm-license -platform %QMAKESPECNAME% -developer-build -ltcg -no-c++11 -no-freetype -qt-sql-sqlite  -qt-style-windowsxp -qt-style-windowsvista -nomake tests -nomake examples %XP_OPTS%  %GL_OPTS% %SSL_OPTS%
 set QT4OPT=-developer-build  -opensource -confirm-license -platform %QMAKESPECNAME% -ltcg -release -shared -fast -stl -qt-sql-sqlite -no-qt3support -no-xmlpatterns -no-declarative-debug -nomake demos -nomake examples -nomake docs  -nomake tests -qt-libpng -qt-libtiff -qt-libjpeg -qt-libmng -script -scripttools -no-webkit  -qt-style-windowsxp -qt-style-windowsvista  -opengl desktop -openssl %XP_OPTS%
 
 :: -graphicssystem opengl
 
-set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%DXSDK_DIR%Include
-set LIB=%LIB%;%OPENSSL_DIR%\lib;%DXSDK_DIR%Lib\x86
-set PATH=%PATH%;%DXSDK_DIR%Utilities\bin\x86
+set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%DXSDK_DIR%Include;%WindowsSdkDir%Include\um\;%WindowsSdkDir%\Include\shared\
+set LIB=%LIB%;%OPENSSL_DIR%\lib;%DXSDK_DIR%Lib\%ARCH%;%WindowsSdkDir%\Lib\win8\um\%ARCH%\;%WindowsSdkDir%\Lib\winv6.3\um\%ARCH%\
+set PATH=%PATH%;%DXSDK_DIR%Utilities\bin\%ARCH%
 @echo PATH=%PATH%
 @echo INCLUDE=%INCLUDE%
 @echo LIB=%LIB%
