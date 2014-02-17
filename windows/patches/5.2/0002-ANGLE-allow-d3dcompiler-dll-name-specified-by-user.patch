@@ -1,0 +1,47 @@
+From b1c6fc4ccd960594c3e0725a2cb184696b3b4374 Mon Sep 17 00:00:00 2001
+From: Lucas Wang <wbsecg1@gmail.com>
+Date: Sun, 1 Dec 2013 22:22:07 +0800
+Subject: [PATCH 2/2] ANGLE: allow d3dcompiler dll name specified by user
+
+The highest version windows xp can load is d3dcompiler_43.dll. But we
+still can compile ANGLE for xp using vs2012/2013 width default d3dcompiler
+header. Then we should override D3DCOMPILER_DLL in d3dcompiler.h.
+
+Change-Id: Ibce552ee7bfeddaa0d401040eea618776d847585
+---
+ src/3rdparty/angle/src/libGLESv2/renderer/Renderer.cpp | 5 +++++
+ src/angle/src/libGLESv2/libGLESv2.pro                  | 2 ++
+ 2 files changed, 7 insertions(+)
+
+diff --git a/src/3rdparty/angle/src/libGLESv2/renderer/Renderer.cpp b/src/3rdparty/angle/src/libGLESv2/renderer/Renderer.cpp
+index 21ad223..1b45851 100644
+--- a/src/3rdparty/angle/src/libGLESv2/renderer/Renderer.cpp
++++ b/src/3rdparty/angle/src/libGLESv2/renderer/Renderer.cpp
+@@ -47,6 +47,11 @@ typedef HRESULT (WINAPI *pD3DCompile)(const void *data, SIZE_T data_size, const
+ 
+ #endif // __MINGW32__
+ 
++#ifdef D3DCOMPILER_DLL_FORCE
++#undef D3DCOMPILER_DLL
++#define D3DCOMPILER_DLL D3DCOMPILER_DLL_FORCE
++#endif //D3DCOMPILER_DLL_FORCE
++
+ namespace rx
+ {
+ 
+diff --git a/src/angle/src/libGLESv2/libGLESv2.pro b/src/angle/src/libGLESv2/libGLESv2.pro
+index 5d54c0f..b7ade46 100644
+--- a/src/angle/src/libGLESv2/libGLESv2.pro
++++ b/src/angle/src/libGLESv2/libGLESv2.pro
+@@ -6,6 +6,8 @@ include(../common/common.pri)
+ 
+ INCLUDEPATH += $$OUT_PWD/.. $$ANGLE_DIR/src/libGLESv2
+ 
++# d3dcompiler later versions can not be loaded on windows xp
++isEqual(QMAKE_TARGET_OS, xp): DEFINES += D3DCOMPILER_DLL_FORCE=L\\\"d3dcompiler_43.dll\\\"
+ # Remember to adapt tools/configure/configureapp.cpp if the Direct X version changes.
+ angle_d3d11 {
+     LIBS_PRIVATE += -ldxgi -ld3d11
+-- 
+1.8.4.msysgit.0
+

@@ -1,0 +1,183 @@
+From 1120825b0860a79f7caf38585551e90d54fbd55a Mon Sep 17 00:00:00 2001
+From: Lucas Wang <wbsecg1@gmail.com>
+Date: Thu, 28 Nov 2013 17:26:03 +0800
+Subject: [PATCH] windows xp target support for msvc>=2012
+
+To enable windows xp supprt, we must do 3 things:
+1. link flag must be /SUBSYSTEM:CONSOLE,5.01 or
+/SUBSYSTEM:WINDOWS,5.01. For x64, the version is 5.02.
+2. Do not use windows kit 8. Win SDK v7.1A is recommended. Just prepend
+right include paths and lib paths to INCLUDE and LIB before build.
+3. Use D3DCompiler_43. Later versions can not be loaded on xp.
+qmake/Makefile.win32 still keep the default link flags, because even
+if qmake can run on xp, those vc compilers can not run on xp.
+
+Change-Id: I84c8439606cc2a9d27d64947702846faa4f1e4a2
+---
+ mkspecs/win32-msvc2012/qmake.conf           |  6 ++++--
+ mkspecs/win32-msvc2013/qmake.conf           |  6 ++++--
+ src/corelib/io/qfilesystemengine_win.cpp    |  4 ++--
+ src/corelib/kernel/qeventdispatcher_win.cpp |  4 ++--
+ tools/configure/configureapp.cpp            | 31 ++++++++++++++++++++++++++++-
+ 5 files changed, 42 insertions(+), 9 deletions(-)
+
+diff --git a/mkspecs/win32-msvc2012/qmake.conf b/mkspecs/win32-msvc2012/qmake.conf
+index f32aa82..c92a9f1 100644
+--- a/mkspecs/win32-msvc2012/qmake.conf
++++ b/mkspecs/win32-msvc2012/qmake.conf
+@@ -4,6 +4,8 @@
+ # Written for Microsoft Visual C++ 2012
+ #
+ 
++load(device_config)
++
+ MAKEFILE_GENERATOR      = MSBUILD
+ QMAKE_PLATFORM          = win32
+ CONFIG                 += incremental flat precompile_header autogen_precompile_source debug_and_release debug_and_release_target embed_manifest_dll embed_manifest_exe
+@@ -69,8 +71,8 @@ QMAKE_LFLAGS            = /NOLOGO /DYNAMICBASE /NXCOMPAT
+ QMAKE_LFLAGS_RELEASE    = /INCREMENTAL:NO
+ QMAKE_LFLAGS_RELEASE_WITH_DEBUGINFO = /DEBUG /OPT:REF /INCREMENTAL:NO
+ QMAKE_LFLAGS_DEBUG      = /DEBUG
+-QMAKE_LFLAGS_CONSOLE    = /SUBSYSTEM:CONSOLE
+-QMAKE_LFLAGS_WINDOWS    = /SUBSYSTEM:WINDOWS
++QMAKE_LFLAGS_CONSOLE    = /SUBSYSTEM:CONSOLE$$QMAKE_LFLAG_SUFFIX
++QMAKE_LFLAGS_WINDOWS    = /SUBSYSTEM:WINDOWS$$QMAKE_LFLAG_SUFFIX
+ QMAKE_LFLAGS_EXE        = \"/MANIFESTDEPENDENCY:type=\'win32\' name=\'Microsoft.Windows.Common-Controls\' version=\'6.0.0.0\' publicKeyToken=\'6595b64144ccf1df\' language=\'*\' processorArchitecture=\'*\'\"
+ QMAKE_LFLAGS_DLL        = /DLL
+ QMAKE_LFLAGS_LTCG       = /LTCG
+diff --git a/mkspecs/win32-msvc2013/qmake.conf b/mkspecs/win32-msvc2013/qmake.conf
+index 0f5c019..7def5bd 100644
+--- a/mkspecs/win32-msvc2013/qmake.conf
++++ b/mkspecs/win32-msvc2013/qmake.conf
+@@ -4,6 +4,8 @@
+ # Written for Microsoft Visual C++ 2013
+ #
+ 
++load(device_config)
++
+ MAKEFILE_GENERATOR      = MSBUILD
+ QMAKE_PLATFORM          = win32
+ CONFIG                 += incremental flat precompile_header autogen_precompile_source debug_and_release debug_and_release_target embed_manifest_dll embed_manifest_exe
+@@ -69,8 +71,8 @@ QMAKE_LFLAGS            = /NOLOGO /DYNAMICBASE /NXCOMPAT
+ QMAKE_LFLAGS_RELEASE    = /INCREMENTAL:NO
+ QMAKE_LFLAGS_RELEASE_WITH_DEBUGINFO = /DEBUG /OPT:REF /INCREMENTAL:NO
+ QMAKE_LFLAGS_DEBUG      = /DEBUG
+-QMAKE_LFLAGS_CONSOLE    = /SUBSYSTEM:CONSOLE
+-QMAKE_LFLAGS_WINDOWS    = /SUBSYSTEM:WINDOWS
++QMAKE_LFLAGS_CONSOLE    = /SUBSYSTEM:CONSOLE$$QMAKE_LFLAG_SUFFIX
++QMAKE_LFLAGS_WINDOWS    = /SUBSYSTEM:WINDOWS$$QMAKE_LFLAG_SUFFIX
+ QMAKE_LFLAGS_EXE        = \"/MANIFESTDEPENDENCY:type=\'win32\' name=\'Microsoft.Windows.Common-Controls\' version=\'6.0.0.0\' publicKeyToken=\'6595b64144ccf1df\' language=\'*\' processorArchitecture=\'*\'\"
+ QMAKE_LFLAGS_DLL        = /DLL
+ QMAKE_LFLAGS_LTCG       = /LTCG
+diff --git a/src/corelib/io/qfilesystemengine_win.cpp b/src/corelib/io/qfilesystemengine_win.cpp
+index 257f18a..c8729fc 100644
+--- a/src/corelib/io/qfilesystemengine_win.cpp
++++ b/src/corelib/io/qfilesystemengine_win.cpp
+@@ -571,7 +571,7 @@ QFileSystemEntry QFileSystemEngine::absoluteName(const QFileSystemEntry &entry)
+ // FILE_INFO_BY_HANDLE_CLASS has been extended by FileIdInfo = 18 as of VS2012.
+ typedef enum { Q_FileIdInfo = 18 } Q_FILE_INFO_BY_HANDLE_CLASS;
+ 
+-#  if defined(Q_CC_MINGW) || (defined(Q_CC_MSVC) && _MSC_VER < 1700)
++#  if defined(Q_CC_MINGW) || (defined(Q_CC_MSVC) && (_MSC_VER < 1700 || WINVER <= 0x0601))
+ 
+ // MinGW-64 defines FILE_ID_128 as of gcc-4.8.1 along with FILE_SUPPORTS_INTEGRITY_STREAMS
+ #    if !(defined(Q_CC_MINGW) && defined(FILE_SUPPORTS_INTEGRITY_STREAMS))
+@@ -584,7 +584,7 @@ typedef struct _FILE_ID_INFO {
+     ULONGLONG VolumeSerialNumber;
+     FILE_ID_128 FileId;
+ } FILE_ID_INFO, *PFILE_ID_INFO;
+-#  endif // if defined (Q_CC_MINGW) || (defined(Q_CC_MSVC) && _MSC_VER < 1700))
++#  endif // if defined (Q_CC_MINGW) || (defined(Q_CC_MSVC) && (_MSC_VER < 1700 || WINVER <= 0x0601))
+ 
+ // File ID for Windows up to version 7.
+ static inline QByteArray fileId(HANDLE handle)
+diff --git a/src/corelib/kernel/qeventdispatcher_win.cpp b/src/corelib/kernel/qeventdispatcher_win.cpp
+index dfb897c..64ad2ff 100644
+--- a/src/corelib/kernel/qeventdispatcher_win.cpp
++++ b/src/corelib/kernel/qeventdispatcher_win.cpp
+@@ -435,10 +435,10 @@ static inline UINT inputTimerMask()
+     UINT result = QS_TIMER | QS_INPUT | QS_RAWINPUT;
+     // QTBUG 28513, QTBUG-29097, QTBUG-29435: QS_TOUCH, QS_POINTER became part of
+     // QS_INPUT in Windows Kit 8. They should not be used when running on pre-Windows 8.
+-#if defined(_MSC_VER) && _MSC_VER >= 1700
++#if WINVER > 0x0601
+     if (QSysInfo::WindowsVersion < QSysInfo::WV_WINDOWS8)
+         result &= ~(QS_TOUCH | QS_POINTER);
+-#endif //  _MSC_VER >= 1700
++#endif //  WINVER > 0x0601
+     return result;
+ }
+ 
+diff --git a/tools/configure/configureapp.cpp b/tools/configure/configureapp.cpp
+index a3e8964..0cfb390 100644
+--- a/tools/configure/configureapp.cpp
++++ b/tools/configure/configureapp.cpp
+@@ -477,6 +477,27 @@ void Configure::parseCmdLine()
+         else if (configCmdLine.at(i) == "-force-asserts") {
+             dictionary[ "FORCE_ASSERTS" ] = "yes";
+         }
++        else if (configCmdLine.at(i) == "-target") {
++            ++i;
++            if (i == argCount)
++                break;
++            QString option = configCmdLine.at(i);
++            dictionary[ "TARGET_OS" ] = option;
++            if (option == "xp") {
++                option = "QMAKE_TARGET_OS=xp\n";
++//http://blogs.msdn.com/b/vcblog/archive/2012/10/08/10357555.aspx?PageIndex=3
++#ifdef Q_OS_WIN64
++                option.append("QMAKE_LFLAG_SUFFIX=,5.02");
++#else
++                option.append("QMAKE_LFLAG_SUFFIX=,5.01");
++#endif // Q_OS_WIN64
++            }
++            QString &devOpt = dictionary["DEVICE_OPTION"];
++            if (!devOpt.isEmpty())
++                devOpt.append("\n").append(option);
++            else
++                devOpt = option;
++        }
+ 
+         else if (configCmdLine.at(i) == "-platform") {
+             ++i;
+@@ -1946,7 +1967,7 @@ bool Configure::displayHelp()
+         desc("NATIVE_GESTURES", "yes", "-native-gestures", "Use native gestures on Windows 7.\n");
+         desc("MSVC_MP", "no", "-no-mp",                 "Do not use multiple processors for compiling with MSVC");
+         desc("MSVC_MP", "yes", "-mp",                   "Use multiple processors for compiling with MSVC (-MP).\n");
+-
++        desc("TARGET_OS", "", "-target",                "Set target os. Can be 'xp' for MSVC >= 2012 to build xp executables. Default is for windows > xp");
+         desc(                   "-loadconfig <config>", "Run configure with the parameters from file configure_<config>.cache.");
+         desc(                   "-saveconfig <config>", "Run configure and save the parameters in file configure_<config>.cache.");
+         desc(                   "-redo",                "Run configure with the same parameters as last time.\n");
+@@ -2428,6 +2449,11 @@ bool Configure::verifyConfiguration()
+              << "files such as headers and libraries." << endl;
+         prompt = true;
+     }
++#if WINVER > 0x0601
++    if (dictionary["TARGET_OS"] == "xp") {
++        cout << "Cannot use Windows Kit 8 to build Qt for Windows XP. Win SDK v7.1A is recommended" << endl;
++    }
++#endif
+ 
+     // -angle given on command line, but Direct X cannot be found.
+     if (dictionary["ANGLE"] != "no") {
+@@ -3210,6 +3236,7 @@ void Configure::generateQConfigPri()
+             configStream << "    QMAKE_DEFAULT_INCDIRS = /usr/include /usr/local/include" << endl;
+         }
+         configStream << "}" << endl;
++
+         if (dictionary["QT_EDITION"].contains("OPENSOURCE"))
+             configStream << "QT_EDITION = " << QLatin1String("OpenSource") << endl;
+         else
+@@ -3504,6 +3531,8 @@ void Configure::displayConfig()
+         sout << "QMAKESPEC..................." << dictionary[ "XQMAKESPEC" ] << " (" << dictionary["QMAKESPEC_FROM"] << ")" << endl;
+     else
+         sout << "QMAKESPEC..................." << dictionary[ "QMAKESPEC" ] << " (" << dictionary["QMAKESPEC_FROM"] << ")" << endl;
++    if (!dictionary[ "TARGET_OS" ].isEmpty())
++        sout << "Target OS..................." << dictionary[ "TARGET_OS" ] << endl;
+     sout << "Architecture................" << dictionary["QT_ARCH"]
+          << ", features:" << dictionary["QT_CPU_FEATURES"] << endl;
+     sout << "Host Architecture..........." << dictionary["QT_HOST_ARCH"]
+-- 
+1.8.4.msysgit.0
+
