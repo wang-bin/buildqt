@@ -6,12 +6,14 @@ set THIS_DIR=%~dp0
 set compiler=%1
 set ARCH=
 set XP=no
+set VCVER=%2
+set MINGW_ARCH=%2
 if "%3" == "-xp" set XP=yes
 
 if "%compiler%" == "" (goto help)
 if "%compiler%" == "g++" set QMAKESPECNAME=win32-g++
 if "%compiler%" == "clang" set QMAKESPECNAME=win32-clang
-if "%compiler%" == "vc" set QMAKESPECNAME=win32-ms%compiler%%2
+if "%compiler%" == "vc" set QMAKESPECNAME=win32-ms%compiler%%VCVER%
 
 @echo compiler: %compiler%
 
@@ -21,15 +23,21 @@ set QTSRCDIR=D:\build\qt-everywhere-opensource-src-5.4.0
 set PYTHON_BIN=C:\Python27
 set GNUWIN32_BIN=%QTSRCDIR%\gnuwin32\bin
 set PERL_BIN=D:\install\strawberry\perl\bin
-set MINGW_BIN=D:\build\mingw32\bin
+set MINGW_BASE=D:\build\mingw
+:: MINGW_ARCH can be 32 or 64
+set MINGW_BIN=%MINGW_BASE%%MINGW_ARCH%\bin
 set DEPEND_DIR=%THIS_DIR%\depends
 set OPENSSL_DIR=%DEPEND_DIR%\OpenSSL
 :: INCLUDE, LIB, PATH may be auto define if DXSDK_DIR is set
 set QTDIR=
+:: WINSDK_DIR can not contain '(' and ')'. e.g. C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A is wrong. you may move it to another place
+:: TODO: why? happens if %WINSDK_DIR%\Include. But if "%WINSDK_DIR%\Include" winver.h may can't be found.
+set WINSDK_DIR=D:\dev\v7.1A
 
-set VCVER=%2
+
+
 if "%compiler%" == "vc" (
-	set BUILD_DIR_SUFFIX=%QMAKESPECNAME%
+	set BUILD_DIR_SUFFIX=%compiler%%VCVER%
 :: compare %2 with 2012 error if %2 not set
 	if %VCVER lss 2012 (
         set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
@@ -42,13 +50,12 @@ if "%compiler%" == "g++" (
     set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
     :: use mingw's d3d headers. must add Utilities\bin\x86\fxc.exe (winsdk 7.1 or latest?) under i686-w64-mingw32\
     set DXSDK_DIR=%MINGW_BIN%\..\i686-w64-mingw32\
-    set BUILD_DIR_SUFFIX=win32
+    if "%MINGW_ARCH%" == "64" (
+        set DXSDK_DIR=%MINGW_BIN%\..\x86_64-w64-mingw32\
+    )  
+    set BUILD_DIR_SUFFIX=mingw
 )
 if "%compiler%" == "clang" set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
-
-:: WINSDK_DIR can not contain '(' and ')'. e.g. C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A is wrong. you may move it to another place
-:: TODO: why? happens if %WINSDK_DIR%\Include. But if "%WINSDK_DIR%\Include" winver.h may can't be found.
-set WINSDK_DIR=D:\dev\v7.1A
 
 
 set XP_OPTS=
@@ -119,15 +126,18 @@ goto setqt
 
 :setgcc
 @echo Requirement: ActivePerl or Strawberry perl, GNUWin32, MinGW gcc
+@echo MinGW dir MUST be %MINGW_BASE%%MINGW_ARCH%
 @echo NOTE: ensure no sh.exe in your %%PATH%%
+@echo NOTE: ensure %DXSDK_DIR%Utilities\bin\x86\fxc.exe exists for building ANGLE
 @echo ...
 @set MAKE_COMMAND=mingw32-make -j4
 set PATH=%THIS_DIR%bin;%GNUWIN32_BIN%;%MINGW_BIN%;%PERL_BIN%;%SystemRoot%\system32;%SystemRoot%;
 for /f "delims=" %%t in ('gcc -dumpmachine') do set ARCH=%%t
+set ARCH=%MINGW_ARCH%
 goto setqt
 
 :setqt
-set BUILDQT_OUT=qt-%BUILD_DIR_SUFFIX%-%ARCH%%SUFFIX%-dygl
+set BUILDQT_OUT=qt-%BUILD_DIR_SUFFIX%%ARCH%%SUFFIX%
 md %BUILDQT_OUT%
 cd %BUILDQT_OUT%
 set PATH=%THIS_DIR%%BUILDQT_OUT%\bin;%QTSRCDIR%\bin;%QTSRCDIR%;%PATH%
