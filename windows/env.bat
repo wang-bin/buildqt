@@ -17,12 +17,12 @@ if "%compiler%" == "vc" set QMAKESPECNAME=win32-ms%compiler%%2
 
 :: build from release package using vc with xp support need add qtbase/.gitignore to rebuild configure.exe
 :: TODO: XP compat for vs>2012
-set QTSRCDIR=D:\qt-everywhere-opensource-src-5.2.1
-set DEPEND_DIR=%THIS_DIR%depends
+set QTSRCDIR=D:\build\qt-everywhere-opensource-src-5.4.0
 set PYTHON_BIN=C:\Python27
 set GNUWIN32_BIN=%QTSRCDIR%\gnuwin32\bin
-set PERL_BIN=G:\strawberry\perl\bin
-set MINGW_BIN=G:\MinGW\MinGW\bin
+set PERL_BIN=D:\install\strawberry\perl\bin
+set MINGW_BIN=D:\build\mingw32\bin
+set DEPEND_DIR=%THIS_DIR%\depends
 set OPENSSL_DIR=%DEPEND_DIR%\OpenSSL
 :: INCLUDE, LIB, PATH may be auto define if DXSDK_DIR is set
 set QTDIR=
@@ -37,21 +37,26 @@ if "%compiler%" == "vc" (
 	    set DXSDK_DIR=
 	)
 )
+:: set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
 if "%compiler%" == "g++" (
     set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
+    :: use mingw's d3d headers. must add Utilities\bin\x86\fxc.exe (winsdk 7.1 or latest?) under i686-w64-mingw32\
+    set DXSDK_DIR=%MINGW_BIN%\..\i686-w64-mingw32\
     set BUILD_DIR_SUFFIX=win32
 )
 if "%compiler%" == "clang" set DXSDK_DIR=%DEPEND_DIR%\DXSDK\
 
 :: WINSDK_DIR can not contain '(' and ')'. e.g. C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A is wrong. you may move it to another place
 :: TODO: why? happens if %WINSDK_DIR%\Include. But if "%WINSDK_DIR%\Include" winver.h may can't be found.
-set WINSDK_DIR=C:\dev\v7.1A
+set WINSDK_DIR=D:\dev\v7.1A
 
 
 set XP_OPTS=
 set SSL_OPTS=-openssl
-set GL_OPTS=-opengl desktop
-:: -opengl es2 -angle
+:: TODO: build angle with d3d11 must use win8 dx sdk! build angle first, then build qt
+set GL_OPTS=-opengl dynamic
+:: -angle-d3d11 enabled in 5.4
+::set GL_OPTS=-opengl es2 -angle
 :: for clang
 ::set CPATH=%THIS_DIR%include\c++\4.8.0;%THIS_DIR%x86_64-w64-mingw32\include;%THIS_DIR%include\c++\4.8.0\x86_64-w64-mingw32
 ::set LIBRARY_PATH=%THIS_DIR%x86_64-w64-mingw32\lib
@@ -88,28 +93,27 @@ findstr /i x86 %TEMP%\testarch.txt  1>nul  && set ARCH=x86
 findstr /i ARM %TEMP%\testarch.txt  1>nul  && set ARCH=arm && set GL_OPTS= && set SSL_OPTS=
 set WIN_SDK_LIB=%WINSDK_DIR%\Lib
 set VCLIB=%VCINSTALLDIR%\lib
-if "%ARCH%" == "x86" (
-	set WIN_SDK_LIB=%WINSDK_DIR%\Lib
-	set VCLIB=%VCINSTALLDIR%\lib
-) else if "%ARCH%" == "x64" (
-	set WIN_SDK_LIB=%WINSDK_DIR%\Lib\x64
-	set VCLIB=%VCINSTALLDIR%\lib\amd64
-) else if "%ARCH%" == "x86_64" (
-	set WIN_SDK_LIB=%WINSDK_DIR%\Lib\x64
-	set VCLIB=%VCINSTALLDIR%\lib\amd64
-)  else (
-	set WIN_SDK_LIB=%WINSDK_DIR%\Lib\%ARCH%
-	set VCLIB=%VCINSTALLDIR%\lib\%ARCH%
+echo "version done"
+echo "version done %ARCH%"
+:: may have special chars, need ""
+set WIN_SDK_LIB="%WINSDK_DIR%\Lib\%ARCH%"
+if "%ARCH%" == "x64" (
+	set VCLIB="%VCINSTALLDIR%\lib\amd64"
+) else if "%ARCH%" == "x86" (
+	set VCLIB="%VCINSTALLDIR%\lib"
+) else (
+	set VCLIB="%VCINSTALLDIR%\lib\%ARCH%"
 )
 
-if "%XP%" == "yes" (
+echo "version done"
+
 :: _USING_V120_SDK71_
 echo "XP"
 	set XP_OPTS=-target xp
 	set SUFFIX=-xp
 	set INCLUDE=%WINSDK_DIR%\Include;%VCINSTALLDIR%\include
 	set LIB=%WIN_SDK_LIB%;%VCLIB%
-)
+
 
 goto setqt
 
@@ -123,7 +127,7 @@ for /f "delims=" %%t in ('gcc -dumpmachine') do set ARCH=%%t
 goto setqt
 
 :setqt
-set BUILDQT_OUT=qt-%BUILD_DIR_SUFFIX%-%ARCH%%SUFFIX%
+set BUILDQT_OUT=qt-%BUILD_DIR_SUFFIX%-%ARCH%%SUFFIX%-dygl
 md %BUILDQT_OUT%
 cd %BUILDQT_OUT%
 set PATH=%THIS_DIR%%BUILDQT_OUT%\bin;%QTSRCDIR%\bin;%QTSRCDIR%;%PATH%
